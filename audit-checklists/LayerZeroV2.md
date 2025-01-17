@@ -52,8 +52,8 @@ It's important to highlight that the dust removed is not lost, it's just cleaned
 
 Bug examples: [1](https://github.com/windhustler/audits/blob/21bf9a1/solo/PING-Security-Review.pdf)
 
-## [LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview)
-LayerZero Read enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
+## LayerZero Read
+[LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview) enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
 
 ### Reverts while reading data blocks subsequent messages
 The request can contains multiple read commands and compute operations. Here is an example of how to specify those commands with [EVMCallRequestV1 and EVMCallComputeV1](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/examples/LzReadCounter.sol#L73-L105) structs, and corresponding functions that get called by the DVNs on the remote chain -- [`readCount`, `lzMap` and `lzReduce`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/examples/LzReadCounter.sol#L108-L133). 
@@ -175,7 +175,7 @@ function _clearPayload(
                lazyInboundNonce[_receiver][_srcEid][_sender] = _nonce;
            }
        }
-       
+
 function _hasPayloadHash(
     address _receiver,
     uint32 _srcEid,
