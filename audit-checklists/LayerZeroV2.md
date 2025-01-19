@@ -56,7 +56,7 @@ Bug examples: [1](https://github.com/windhustler/audits/blob/21bf9a1/solo/PING-S
 [LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview) enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
 
 ### Reverts while reading data blocks subsequent messages
-The request can contains multiple read commands and compute operations. Here is an example of how to specify those commands with [EVMCallRequestV1 and EVMCallComputeV1](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/examples/LzReadCounter.sol#L73-L105) structs, and corresponding functions that get called by the DVNs on the remote chain -- [`readCount`, `lzMap` and `lzReduce`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/examples/LzReadCounter.sol#L108-L133). 
+The request can contain multiple read commands and compute operations. Here is an example of how to specify those commands with [EVMCallRequestV1 and EVMCallComputeV1](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/examples/LzReadCounter.sol#L73-L105) structs, and corresponding functions that get called by the DVNs on the remote chain -- [`readCount`, `lzMap` and `lzReduce`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/examples/LzReadCounter.sol#L108-L133). 
 
 If any of these functions calls revert(`readCount`, `lzMap` and `lzReduce`), the DVNs are not able to create a response and verify the message. Let's look at what happens if the message with certain nonce can't be verified. An example covers sending a message on Ethereum to read the data from Polygon. 
 
@@ -87,7 +87,7 @@ function _outbound(address _sender, uint32 _dstEid, bytes32 _receiver) internal 
     }
 }
 ````
-- In case of lzRead, `dstEid` is the `channelId` equal to `4294967295`. Read paths informations can be found in the [Read Paths](https://docs.layerzero.network/v2/developers/evm/lzread/read-paths) section in the LayerZero docs.
+- In case of lzRead, `dstEid` is the `channelId` equal to `4294967295`. Read paths information can be found in the [Read Paths](https://docs.layerzero.network/v2/developers/evm/lzread/read-paths) section in the LayerZero docs.
 - This `Packet` gets processed in the [`ReadLib1002`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/messagelib/contracts/uln/readlib/ReadLib1002.sol#L97) contract. 
 - Application configured DVNs needs to [verify the message and commit verification](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/messagelib/contracts/uln/readlib/ReadLib1002.sol#L138-L167) needs to be called.
 - If the DVNs can't generate a response, they can't verify that specific message.
