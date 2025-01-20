@@ -60,8 +60,8 @@ In certain exceptional conditions, users might need to manually execute the tran
 These conditions include:
 
 - **Unhandled exceptions**: Logical errors in the receiver contract.  
-- **Gas limit exceeded for token pools**: If the combined execution of the required functions (`balanceOf` checks and [releaseOrMint](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/ccip/pools/BurnMintTokenPoolAbstract.sol#L36)) surpasses the default gas limit of 90,000 on the destination blockchain.
-- **Insufficient gas**: If the gas limit provided in the [extraArgs](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/ccip/libraries/Client.sol#L49) parameter of the message is insufficient to execute the `ccipReceive()` function. 
+- **Gas limit exceeded for token pools**: If the combined execution of the required functions (`balanceOf` checks and [releaseOrMint](https://github.com/smartcontractkit/ccip/blob/bca2fe0/contracts/src/v0.8/ccip/pools/BurnMintTokenPoolAbstract.sol#L36)) surpasses the default gas limit of 90,000 on the destination blockchain.
+- **Insufficient gas**: If the gas limit provided in the [extraArgs](https://github.com/smartcontractkit/ccip/blob/5e7b209/contracts/src/v0.8/ccip/libraries/Client.sol#L49) parameter of the message is insufficient to execute the `ccipReceive()` function. 
 - **Smart Execution time window exceeded**: If the message cannot be executed on the destination chain within CCIP’s Smart Execution time window (currently set to 8 hours). 
   - This could occur during extreme network congestion or gas price spikes.  
 
@@ -76,7 +76,7 @@ Bug examples: [1](https://code4rena.com/reports/2024-04-renzo#m-04-price-updatin
 On the destination blockchain, the CCIP OffRamp contract performs three key operations when releasing or minting tokens:
 
 1. **`balanceOf` before minting/releasing tokens**
-2. **[`releaseOrMint`](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/ccip/pools/LockReleaseTokenPool.sol#L64) to mint or release tokens**
+2. **[`releaseOrMint`](https://github.com/smartcontractkit/ccip/blob/bca2fe0/contracts/src/v0.8/ccip/pools/LockReleaseTokenPool.sol#L64) to mint or release tokens**
 3. **`balanceOf` after minting/releasing tokens**
 
 > **Note**: If the combined gas consumption of these three operations exceeds the default gas limit of 90,000 on the destination blockchain, the CCIP execution will fail.
@@ -85,11 +85,11 @@ On the destination blockchain, the CCIP OffRamp contract performs three key oper
 If custom `TokenPool` is build, it is crucial to follow these guidelines:
 
 - **For Burn and Mint mechanisms**:  
-  Custom token pool should inherit from [BurnMintTokenPoolAbstract](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/ccip/pools/BurnMintTokenPoolAbstract.sol).
+  Custom token pool should inherit from [BurnMintTokenPoolAbstract](https://github.com/smartcontractkit/ccip/blob/bca2fe0/contracts/src/v0.8/ccip/pools/BurnMintTokenPoolAbstract.sol).
 - **For Lock and Release mechanisms**:  
   Custom token pool can:  
-  - Inherit from [TokenPool](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/ccip/pools/TokenPool.sol) and implement the [ILiquidityContainer](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/liquiditymanager/interfaces/ILiquidityContainer.sol) interface.  
-  - Or directly inherit from [LockReleaseTokenPool](https://github.com/smartcontractkit/ccip/blob/release/contracts-ccip-1.5.1/contracts/src/v0.8/ccip/pools/LockReleaseTokenPool.sol) and reimplement the `lockOrBurn` and `releaseOrMint` functions as needed.
+  - Inherit from [TokenPool](https://github.com/smartcontractkit/ccip/blob/478f0e5/contracts/src/v0.8/ccip/pools/TokenPool.sol) and implement the [ILiquidityContainer](https://github.com/smartcontractkit/ccip/blob/19dafcc/contracts/src/v0.8/liquiditymanager/interfaces/ILiquidityContainer.sol) interface.  
+  - Or directly inherit from [LockReleaseTokenPool](https://github.com/smartcontractkit/ccip/blob/bca2fe0/contracts/src/v0.8/ccip/pools/LockReleaseTokenPool.sol) and reimplement the `lockOrBurn` and `releaseOrMint` functions as needed.
 
 
 ## Validate CCIP Inputs
