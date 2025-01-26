@@ -193,6 +193,36 @@ In summary, if a message with a certain nonce has been sent, but couldn't been v
 
 > The `OAppRead` or its delegate can call [`EndpointV2::skip`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessagingChannel.sol#L76-L88) function to increment the `lazyInboundNonce` without having had that corresponding message be verified. This can be used to skip the verification but it's paramount to ensure that the message can be verified in the first place but not having reverts during reading data. 
 
+### lzRead can be used to read data from the same chain
+As opposed to standard LayerZero messages where you can only send data to a different chain, `lzRead` allows to read data from the same chain. 
+
+Here is an example of supported chains for Ethereum:
+![Ethereum Read Paths](/resources/LayerZero-lzRead-Ethereum.png)
+
+The targetEid is specified inside the `EVMCallRequestV1` and `EVMCallComputeV1` structs.
+```solidity
+struct EVMCallRequestV1 {
+    uint16 appRequestLabel; // Label identifying the application or type of request (can be use in lzCompute)
+>>>    uint32 targetEid; // Target endpoint ID (representing a target blockchain)
+    bool isBlockNum; // True if the request = block number, false if timestamp
+    uint64 blockNumOrTimestamp; // Block number or timestamp to use in the request
+    uint16 confirmations; // Number of block confirmations on top of the requested block number or timestamp before the view function can be called
+    address to; // Address of the target contract on the target chain
+    bytes callData; // Calldata for the contract call
+}
+
+struct EVMCallComputeV1 {
+    uint8 computeSetting; // Compute setting (0 = map only, 1 = reduce only, 2 = map reduce)
+>>>    uint32 targetEid; // Target endpoint ID (representing a target blockchain)
+    bool isBlockNum; // True if the request = block number, false if timestamp
+    uint64 blockNumOrTimestamp; // Block number or timestamp to use in the request
+    uint16 confirmations; // Number of block confirmations on top of the requested block number or timestamp before the view function can be called
+    address to; // Address of the target contract on the target chain
+}
+```
+
+> Make sure to check the `targetEid` for the `lzRead` request and assess if you need to read data from the same chain, or any other for that matter. As highlited in the [Reverts while reading data blocks subsequent messages](#reverts-while-reading-data-blocks-subsequent-messages) section, it's paramaount that the `lzRead` request doesn't revert.
+
 ## Useful resources
 
 - [LayerZeroV2 developer docs](https://docs.layerzero.network/v2)
