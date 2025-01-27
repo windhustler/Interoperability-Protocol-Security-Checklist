@@ -223,6 +223,62 @@ struct EVMCallComputeV1 {
 
 > Make sure to check the `targetEid` for the `lzRead` request and assess if you need to read data from the same chain, or any other for that matter. As highlited in the [Reverts while reading data blocks subsequent messages](#reverts-while-reading-data-blocks-subsequent-messages) section, it's paramaount that the `lzRead` request doesn't revert.
 
+## LayerZero immutability
+
+How immutable is LayerZero? 
+
+Based on the [LayerZeroV2 docs](https://docs.layerzero.network/v2/developers/evm/overview):
+> LayerZero is an immutable, censorship-resistant, and permissionless smart contract protocol that enables anyone on a blockchain to send, verify, and execute messages on a supported destination network.
+
+Is this true? Continue reading if you want to learn why you should always configure your OApp. 
+
+Let's examine the critical dependencies in the `EndpointV2` contract, which is the core contract of the system. Two key external dependencies are:
+
+1. **Message Sending**: The [send library lookup](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L75) during message transmission
+   ```solidity
+   address _sendLibrary = getSendLibrary(_sender, _params.dstEid);
+   ```
+2. **Message Verification**: The [receive library validation](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L152) on the destination chain
+   ```solidity
+   if (!isValidReceiveLibrary(_receiver, _origin.srcEid, msg.sender)) revert Errors.LZ_InvalidReceiveLibrary();
+   ```
+
+The configuration of send and receive libraries is managed through the `MessageLibManager` contract, which `EndpointV2` extends.
+
+> Only the LayerZero time can register libraries that can be used to send or receive messages.
+
+### Key Privileges of LayerZero Team
+1. **Library Registration**: Only LayerZero can register new send/receive libraries via [`MessageLibManager.registerLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L140)
+2. **Default Library Control**: LayerZero can change default send/receive libraries via:
+   - [`setDefaultSendLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L157)
+   - [`setDefaultReceiveLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L171)
+
+
+While only LayerZero can register new libraries, each protocol can select and configure their preferred send and receive libraries from the registered options.
+
+What are the options? Let's check the [EndpointV2 on Ethereum](https://etherscan.io/address/0x1a44076050125825900e736c501f859c50fE728c) contract and call the `getRegisteredLibraries` variable. Here is what we get:
+
+- [BlockLibrary](https://etherscan.io/address/0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862)- dummy library that completely disables sending and receiving messages. 
+- [SendUln302](https://etherscan.io/address/0xbb2ea70c9e858123480642cf96acbcce1372dce1)
+- [ReceiveUln302](https://etherscan.io/address/0xc02ab410f0734efa3f14628780e6e695156024c2)
+- [ReadLibrary1002](https://etherscan.io/address/0x74f55bc2a79a27a0bf1d1a35db5d0fc36b9fdb9d)
+
+Currently, the default libraries are the only available options and are required for cross-chain communication. Protocols that don't explicitly configure their libraries will automatically use these defaults.
+
+There are two security considerations here. The attack threat is LayerZero acting maliciously.
+
+1. **Protocol hasn’t configured a send/receive library**
+    - Relies on system defaults
+    - LayerZero can freely change these defaults
+    - Risk of protocol functionality being bricked
+
+2. **Protocol has explicitly configured their send/receive library to use the current LayerZero default**
+    - While this may seem similar to not configuring at all (since currently the default libraries are the only option), there is a crucial distinction.
+    - When you explicitly configure your send/receive library, that configuration is locked in for your protocol.
+    - Even if LayerZero later adds new libraries or changes the defaults, your protocol will continue using your configured libraries
+    - This gives you control over your security posture - you won't be affected by changes to system defaults
+
+
 ## Useful resources
 
 - [LayerZeroV2 developer docs](https://docs.layerzero.network/v2)
