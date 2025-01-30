@@ -120,13 +120,13 @@ Orbit chains are custom chains deployed using Arbitrum's Nitro software stack. T
 
 ### Using custom fee token
 
-Transaction fees on Arbitrum are paid in ETH. Where does the ETH come from? Users lock their ETH in the bridge contract on parent chain (Ethereum) and Arbitrum node mints the same amount of native currency on child chain (Arbitrum) in user's account.
+Transaction fees on Arbitrum are paid in ETH. Where does the ETH come from? Users lock their ETH in the bridge contract on the parent chain (Ethereum) and Arbitrum node mints the same amount of native currency on the child chain (Arbitrum) in user's account.
 
-But Orbit chains don't need to necessarily use ETH to pay for gas. Orbit chain owner can select, at deployment time, any ERC20 to be the fee token for new chain. Once set, fee token for the chain cannot be changed. In this case user will lock the ERC20 fee token on the parent chain and Arbitrum node will mint the same amount of native currency on the Orbit chain. Customized bridge contract are used on parent chain for this purpose - `ERC20Bridge`, `ERC20Inbox` and `ERC20Outbox` are used instead of `Bridge`, `Inbox` and `Outbox`.
+But Orbit chains don't need to necessarily use ETH to pay for gas. Orbit chain owner can select, at deployment time, any ERC20 to be the fee token for new chain. Once set, fee token for the chain cannot be changed. In this case user will lock the ERC20 fee token on the parent chain and Arbitrum node will mint the same amount of native currency on the Orbit chain. Customized bridge contracts are used on the parent chain for this purpose - `ERC20Bridge`, `ERC20Inbox` and `ERC20Outbox` are used instead of `Bridge`, `Inbox` and `Outbox`.
 
-> Check if Orbit chain uses custom fee token by calling [nativeToken()](https://github.com/OffchainLabs/nitro-contracts/blob/780366a0c40caf694ed544a6a1d52c0de56573ba/src/bridge/ERC20Bridge.sol#L38) function on the chain's bridge contract. If chain is ETH based call will revert, otherwise it will return the address of the fee token on parent chain
+> Check if Orbit chain uses custom fee token by calling [nativeToken()](https://github.com/OffchainLabs/nitro-contracts/blob/780366a0c40caf694ed544a6a1d52c0de56573ba/src/bridge/ERC20Bridge.sol#L38) function on the chain's bridge contract. If chain is ETH based call will revert, otherwise it will return the address of the fee token on the parent chain
 
-## Custom fee token with non-18 decimals
+### Custom fee token with non-18 decimals
 
 Let's say a team creates a new Orbit chain which uses USDC as the custom fee token. There is an inherent mismatch - USDC uses 6 decimals, while native currency is assumed to have 18 decimals. Orbit's bridge contracts deal with this in following way - when the native fee tokens are deposited from the parent chain to the Orbit chain, the deposited amount is scaled to 18 decimals. When native currency is withdrawn from the Orbit chain to the parent chain the amount is scaled from 18 back to the fee token's decimals. It's important to notice that scaling process can round-down amounts and cause user to lose some dust.
 
@@ -147,6 +147,19 @@ Unlocked on Arbitrum: 12000000000000000300 / 10^12 = 12000000 (12 USDC)
 User gets back 12 USDC, while the dust is lost in conversion process and it stays locked in the `ERC20Bridge` contract.
 
 > Look for any issues that can be caused by scaling or rounding logic when Orbit chain's fee token uses non-18 decimals
+
+### Retryable tickets in Orbit chains using non-18 decimals fee tokens
+
+When creating a retryable ticket to send L1 to L2 message to Orbit chain user needs to provide [4 numerical values](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/IERC20Inbox.sol#L21..L36):
+
+- l2CallValue (call value for execution on L2)
+- maxSubmissionCost (value to pay for storing the retryable ticket)
+- maxFeePerGas (gas price bid on L2)
+- tokenTotalFeeAmount (amount of fee tokens to be transferred from user to cover all the costs)
+
+Let's again assume Orbit chain's fee token is USDC. In that case it is not obvious wether the retryable ticket's parameters are denominated in USDC (6 decimals) or in the native currency (18 decimals). Answer is mixed - `tokenTotalFeeAmount` is denominated in USDC's decimals, while other 3 params are denominated in native currency's decimals. This is because `tokenTotalFeeAmount` signals how many tokens user needs to spend on **parent chain**, while other 3 params signal how execution is to be performed on **Orbit chain**.
+
+> When contract is integrating the Orbit retryable tickets, check that all the ticket input parameters are properly denominated
 
 ## Useful resources
 
