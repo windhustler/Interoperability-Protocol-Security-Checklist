@@ -114,6 +114,40 @@ Even though min/max answers have been deprecated on newer feeds, some older feed
 
 Bug examples: [1](https://github.com/pashov/audits/blob/master/team/md/Cryptex-security-review.md#m-02-circuit-breakers-are-not-considered-when-processing-chainlinks-answer), [2](https://code4rena.com/reports/2024-05-bakerfi#m-06-min-and-maxanswer-never-checked-for-oracle-price-feed)
 
+## Orbit chains
+
+Orbit chains are custom chains deployed using Arbitrum's Nitro software stack. They are mostly deployed as L2s on top of Ethereum or as L3s on top of Arbitrum.
+
+### Using custom fee token
+
+Transaction fees on Arbitrum are paid in ETH. Where does the ETH come from? Users lock their ETH in the bridge contract on parent chain (Ethereum) and Arbitrum node mints the same amount of native currency on child chain (Arbitrum) in user's account.
+
+But Orbit chains don't need to necessarily use ETH to pay for gas. Orbit chain owner can select, at deployment time, any ERC20 to be the fee token for new chain. Once set, fee token for the chain cannot be changed. In this case user will lock the ERC20 fee token on the parent chain and Arbitrum node will mint the same amount of native currency on the Orbit chain. Customized bridge contract are used on parent chain for this purpose - `ERC20Bridge`, `ERC20Inbox` and `ERC20Outbox` are used instead of `Bridge`, `Inbox` and `Outbox`.
+
+> Check if Orbit chain uses custom fee token by calling [nativeToken()](https://github.com/OffchainLabs/nitro-contracts/blob/780366a0c40caf694ed544a6a1d52c0de56573ba/src/bridge/ERC20Bridge.sol#L38) function on the chain's bridge contract. If chain is ETH based call will revert, otherwise it will return the address of the fee token on parent chain
+
+## Custom fee token with non-18 decimals
+
+Let's say a team creates a new Orbit chain which uses USDC as the custom fee token. There is an inherent mismatch - USDC uses 6 decimals, while native currency is assumed to have 18 decimals. Orbit's bridge contracts deal with this in following way - when the native fee tokens are deposited from the parent chain to the Orbit chain, the deposited amount is scaled to 18 decimals. When native currency is withdrawn from the Orbit chain to the parent chain the amount is scaled from 18 back to the fee token's decimals. It's important to notice that scaling process can round-down amounts and cause user to lose some dust.
+
+As an example - Orbit chain is deployed as an L3 on top of Arbitrum and chain uses USDC as custom fee token. User bridges 10 USDC from Arbitrum to Orbit chain.
+
+```
+Deposited on Arbitrum: 10000000 (10 USDC)
+Minted on Orbit (scale to 18 decimals): 10000000000000000000 (10 "ETH" of native currency)
+```
+
+On Orbit chain user earns some yield, let's say `2*10^18 + 300`. User's total balance now is `12000000000000000300`. User decides to bridge it back to Arbitrum.
+
+```
+Withdrawn from Orbit: 12000000000000000300 (12.0000000000000003 "ETH" of native currency)
+Unlocked on Arbitrum: 12000000000000000300 / 10^12 = 12000000 (12 USDC)
+```
+
+User gets back 12 USDC, while the dust is lost in conversion process and it stays locked in the `ERC20Bridge` contract.
+
+> Look for any issues that can be caused by scaling or rounding logic when Orbit chain's fee token uses non-18 decimals
+
 ## Useful resources
 
 - [Arbitrum official docs](https://docs.arbitrum.io/intro/)
