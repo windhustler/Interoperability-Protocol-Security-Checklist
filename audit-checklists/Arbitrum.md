@@ -68,7 +68,7 @@ Bug examples: [1](https://github.com/code-423n4/2024-05-olas-findings/issues/29)
 
 ### Safe vs unsafe retryable ticket creation
 
-Arbitrum's `Inbox` contract offers 2 different entrypoints for creating retryables - [createRetryableTicket](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/Inbox.sol#L261) and [unsafeCreateRetryableTicket](https://github.com/OffchainLabs/nitro-contracts/blob/780366a0c40caf694ed544a6a1d52c0de56573ba/src/bridge/Inbox.sol#L285). There are couple of important differences between the two.
+Arbitrum's `Inbox` contract offers 2 different entrypoints for creating retryables - [createRetryableTicket](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/Inbox.sol#L261) and [unsafeCreateRetryableTicket](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/Inbox.sol#L285). There are couple of important differences between the two.
 
 Unsafe version **will not** check that value provided is enough to cover the L2 execution cost of `gasLimit * gasPrice`. Creator of retryable ticket can even provide 0 value for gas limit and gas price and submission will succeed (value provided still must cover `maxSubmissionCost`), but auto-redemption will not be scheduled and ticket will need to be executed manually by providing L2 funds.
 
