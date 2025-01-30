@@ -4,7 +4,7 @@
 
 ### Block number
 
-Invoking `block.number` in a smart contract on Arbitrum will return the **L1** block number at which the sequencer received the transaction, not an **L2** block number. Also worth noting, the block number being returned is not necessarily the latest L1 block number. It is the latest synced block number and the syncing process occurs approximately every minute. In that period there can be ~5 new L1 blocks. So values returned by `block.number` on Arbitrum do not increase continuously but in "jumps" of ~5 blocks. If contract's logic requires tracking Arbitrum's L2 block numbers, that's possible as well using the precompile call `ArbSys(100).arbBlockNumber()`.
+Invoking `block.number` in a smart contract on Arbitrum will return the **L1** block number at which the sequencer received the transaction, not the **L2** block number. Also worth noting, the block number being returned is not necessarily the latest L1 block number. It is the latest synced block number and the syncing process occurs approximately every minute. In that period there can be ~5 new L1 blocks. So values returned by `block.number` on Arbitrum do not increase continuously but in "jumps" of ~5 blocks. If contract's logic requires tracking Arbitrum's L2 block numbers, that's possible as well using the precompile call `ArbSys(100).arbBlockNumber()`.
 
 > Always check for incorrect use of `block.number` on Arbitrum chains, especially if it is used to track time over short periods.
 
@@ -103,3 +103,8 @@ Even though min/max answers have been deprecated on newer feeds, some older feed
 > Check if the price feed used by the protocol has `minAnswer` and `maxAnswer` configured, and analyze the implications of the unlikely case that the actual price goes out of the range
 
 Bug examples: [1](https://github.com/pashov/audits/blob/master/team/md/Cryptex-security-review.md#m-02-circuit-breakers-are-not-considered-when-processing-chainlinks-answer), [2](https://code4rena.com/reports/2024-05-bakerfi#m-06-min-and-maxanswer-never-checked-for-oracle-price-feed)
+
+## Useful resources
+
+- [Arbitrum official docs](https://docs.arbitrum.io/intro/)
+- [Out-of-order retryable tickets execution](https://blog.trailofbits.com/2024/03/01/when-try-try-try-again-leads-to-out-of-order-execution-bugs/)
