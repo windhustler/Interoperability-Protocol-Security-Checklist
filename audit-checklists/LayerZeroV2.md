@@ -252,7 +252,7 @@ struct EVMCallComputeV1 {
 }
 ```
 
-> Make sure to check the `targetEid` for the `lzRead` request and assess if you need to read data from the same chain, or any other for that matter. As highlited in the [Reverts while reading data blocks subsequent messages](#reverts-while-reading-data-blocks-subsequent-messages) section, it's paramaount that the `lzRead` request doesn't revert.
+> Make sure to check the `targetEid` for the `lzRead` request and assess if you need to read data from the same chain, or any other for that matter. As highlited in the [Reverts while reading data blocks subsequent messages](#reverts-while-reading-data-blocks-subsequent-messages) section, it's paramount that the `lzRead` request doesn't revert.
 
 ## LayerZero immutability
 
