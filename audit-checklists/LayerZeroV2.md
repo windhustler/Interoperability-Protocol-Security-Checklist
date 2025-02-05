@@ -52,6 +52,37 @@ It's important to highlight that the dust removed is not lost, it's just cleaned
 
 Bug examples: [1](https://github.com/windhustler/audits/blob/21bf9a1/solo/PING-Security-Review.pdf)
 
+### Overriding shared decimals
+The `OFTCore.sol` contract uses a default `sharedDecimals` value of `6`. When overriding this value, be aware of a critical limitation: the `_toSD` function casts amounts to `uint64` when converting from local to shared decimals.
+
+```
+   */
+    function _buildMsgAndOptions(
+        SendParam calldata _sendParam,
+        uint256 _amountLD
+    ) internal view virtual returns (bytes memory message, bytes memory options) {
+        bool hasCompose;
+        // @dev This generated message has the msg.sender encoded into the payload so the remote knows who the caller is.
+        (message, hasCompose) = OFTMsgCodec.encode(
+            _sendParam.to,
+ >>>           _toSD(_amountLD),
+            // @dev Must be include a non empty bytes if you want to compose, EVEN if you dont need it on the remote.
+            // EVEN if you dont require an arbitrary payload to be sent... eg. '0x01'
+            _sendParam.composeMsg
+        );
+
+    function _toSD(uint256 _amountLD) internal view virtual returns (uint64 amountSD) {
+        return uint64(_amountLD / decimalConversionRate);
+    }
+```
+
+This becomes important when `localDecimals` and `sharedDecimals` are both set to 18. In this case:
+- The `decimalConversionRate` becomes 1 (no decimal adjustment)
+- Maximum transferable amount is limited to `uint64.max`
+- Any amount larger than `uint64.max` will silently be truncated to `uint64.max`
+
+This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be capped at `uint64.max`, resulting in a loss of value. 
+
 ## LayerZero Read
 [LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview) enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
 
@@ -272,12 +303,11 @@ There are two security considerations here. The attack threat is LayerZero actin
     - LayerZero can freely change these defaults
     - Risk of protocol functionality being bricked
 
-2. **Protocol has explicitly configured their send/receive library to use the current LayerZero default**
+2. **Protocol has explicitly configured their send/receive library to use the current LayerZero defaults**
     - While this may seem similar to not configuring at all (since currently the default libraries are the only option), there is a crucial distinction.
     - When you explicitly configure your send/receive library, that configuration is locked in for your protocol.
     - Even if LayerZero later adds new libraries or changes the defaults, your protocol will continue using your configured libraries
     - This gives you control over your security posture - you won't be affected by changes to system defaults
-
 
 ## Useful resources
 
