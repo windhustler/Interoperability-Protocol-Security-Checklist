@@ -52,6 +52,37 @@ It's important to highlight that the dust removed is not lost, it's just cleaned
 
 Bug examples: [1](https://github.com/windhustler/audits/blob/21bf9a1/solo/PING-Security-Review.pdf)
 
+### Overriding shared decimals
+The `OFTCore.sol` contract uses a default `sharedDecimals` value of `6`. When overriding this value, be aware of a critical limitation: the `_toSD` function casts amounts to `uint64` when converting from local to shared decimals.
+
+```
+   */
+    function _buildMsgAndOptions(
+        SendParam calldata _sendParam,
+        uint256 _amountLD
+    ) internal view virtual returns (bytes memory message, bytes memory options) {
+        bool hasCompose;
+        // @dev This generated message has the msg.sender encoded into the payload so the remote knows who the caller is.
+        (message, hasCompose) = OFTMsgCodec.encode(
+            _sendParam.to,
+ >>>           _toSD(_amountLD),
+            // @dev Must be include a non empty bytes if you want to compose, EVEN if you dont need it on the remote.
+            // EVEN if you dont require an arbitrary payload to be sent... eg. '0x01'
+            _sendParam.composeMsg
+        );
+
+    function _toSD(uint256 _amountLD) internal view virtual returns (uint64 amountSD) {
+        return uint64(_amountLD / decimalConversionRate);
+    }
+```
+
+This becomes important when `localDecimals` and `sharedDecimals` are both set to 18. In this case:
+- The `decimalConversionRate` becomes 1 (no decimal adjustment)
+- Maximum transferable amount is limited to `uint64.max`
+- Any amount larger than `uint64.max` will silently be truncated to `uint64.max`
+
+This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be capped at `uint64.max`, resulting in a loss of value. 
+
 ## LayerZero Read
 [LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview) enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
 
@@ -192,6 +223,91 @@ function _hasPayloadHash(
 In summary, if a message with a certain nonce has been sent, but couldn't been verified, the `lzReceive` function will revert until that nonce is verified. 
 
 > The `OAppRead` or its delegate can call [`EndpointV2::skip`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessagingChannel.sol#L76-L88) function to increment the `lazyInboundNonce` without having had that corresponding message be verified. This can be used to skip the verification but it's paramount to ensure that the message can be verified in the first place but not having reverts during reading data. 
+
+### lzRead can be used to read data from the same chain
+As opposed to standard LayerZero messages where you can only send data to a different chain, `lzRead` allows to read data from the same chain. 
+
+Here is an example of supported chains for Ethereum:
+![Ethereum Read Paths](/resources/LayerZero-lzRead-Ethereum.png)
+
+The targetEid is specified inside the `EVMCallRequestV1` and `EVMCallComputeV1` structs.
+```solidity
+struct EVMCallRequestV1 {
+    uint16 appRequestLabel; // Label identifying the application or type of request (can be use in lzCompute)
+>>>    uint32 targetEid; // Target endpoint ID (representing a target blockchain)
+    bool isBlockNum; // True if the request = block number, false if timestamp
+    uint64 blockNumOrTimestamp; // Block number or timestamp to use in the request
+    uint16 confirmations; // Number of block confirmations on top of the requested block number or timestamp before the view function can be called
+    address to; // Address of the target contract on the target chain
+    bytes callData; // Calldata for the contract call
+}
+
+struct EVMCallComputeV1 {
+    uint8 computeSetting; // Compute setting (0 = map only, 1 = reduce only, 2 = map reduce)
+>>>    uint32 targetEid; // Target endpoint ID (representing a target blockchain)
+    bool isBlockNum; // True if the request = block number, false if timestamp
+    uint64 blockNumOrTimestamp; // Block number or timestamp to use in the request
+    uint16 confirmations; // Number of block confirmations on top of the requested block number or timestamp before the view function can be called
+    address to; // Address of the target contract on the target chain
+}
+```
+
+> Make sure to check the `targetEid` for the `lzRead` request and assess if you need to read data from the same chain, or any other for that matter. As highlited in the [Reverts while reading data blocks subsequent messages](#reverts-while-reading-data-blocks-subsequent-messages) section, it's paramount that the `lzRead` request doesn't revert.
+
+## LayerZero immutability
+
+How immutable is LayerZero? 
+
+Based on the [LayerZeroV2 docs](https://docs.layerzero.network/v2/developers/evm/overview):
+> LayerZero is an immutable, censorship-resistant, and permissionless smart contract protocol that enables anyone on a blockchain to send, verify, and execute messages on a supported destination network.
+
+Is this true? Continue reading if you want to learn why you should always configure your OApp. 
+
+Let's examine the critical dependencies in the `EndpointV2` contract, which is the core contract of the system. Two key external dependencies are:
+
+1. **Message Sending**: The [send library lookup](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L75) during message transmission
+   ```solidity
+   address _sendLibrary = getSendLibrary(_sender, _params.dstEid);
+   ```
+2. **Message Verification**: The [receive library validation](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L152) on the destination chain
+   ```solidity
+   if (!isValidReceiveLibrary(_receiver, _origin.srcEid, msg.sender)) revert Errors.LZ_InvalidReceiveLibrary();
+   ```
+
+The configuration of send and receive libraries is managed through the `MessageLibManager` contract, which `EndpointV2` extends.
+
+> Only the LayerZero time can register libraries that can be used to send or receive messages.
+
+### Key Privileges of LayerZero Team
+1. **Library Registration**: Only LayerZero can register new send/receive libraries via [`MessageLibManager.registerLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L140)
+2. **Default Library Control**: LayerZero can change default send/receive libraries via:
+   - [`setDefaultSendLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L157)
+   - [`setDefaultReceiveLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L171)
+
+
+While only LayerZero can register new libraries, each protocol can select and configure their preferred send and receive libraries from the registered options.
+
+What are the options? Let's check the [EndpointV2 on Ethereum](https://etherscan.io/address/0x1a44076050125825900e736c501f859c50fE728c) contract and call the `getRegisteredLibraries` variable. Here is what we get:
+
+- [BlockLibrary](https://etherscan.io/address/0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862)- dummy library that completely disables sending and receiving messages. 
+- [SendUln302](https://etherscan.io/address/0xbb2ea70c9e858123480642cf96acbcce1372dce1)
+- [ReceiveUln302](https://etherscan.io/address/0xc02ab410f0734efa3f14628780e6e695156024c2)
+- [ReadLibrary1002](https://etherscan.io/address/0x74f55bc2a79a27a0bf1d1a35db5d0fc36b9fdb9d)
+
+Currently, the default libraries are the only available options and are required for cross-chain communication. Protocols that don't explicitly configure their libraries will automatically use these defaults.
+
+There are two security considerations here. The attack threat is LayerZero acting maliciously.
+
+1. **Protocol hasn’t configured a send/receive library**
+    - Relies on system defaults
+    - LayerZero can freely change these defaults
+    - Risk of protocol functionality being bricked
+
+2. **Protocol has explicitly configured their send/receive library to use the current LayerZero defaults**
+    - While this may seem similar to not configuring at all (since currently the default libraries are the only option), there is a crucial distinction.
+    - When you explicitly configure your send/receive library, that configuration is locked in for your protocol.
+    - Even if LayerZero later adds new libraries or changes the defaults, your protocol will continue using your configured libraries
+    - This gives you control over your security posture - you won't be affected by changes to system defaults
 
 ## Useful resources
 
