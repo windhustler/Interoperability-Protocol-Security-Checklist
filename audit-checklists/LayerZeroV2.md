@@ -53,7 +53,7 @@ It's important to highlight that the dust removed is not lost, it's just cleaned
 Bug examples: [1](https://github.com/windhustler/audits/blob/21bf9a1/solo/PING-Security-Review.pdf)
 
 ### Overriding shared decimals
-The `OFTCore.sol` contract uses a default `sharedDecimals` value of `6`. When overriding this value, be aware of a critical limitation: the `_toSD` function casts amounts to `uint64` when converting from local to shared decimals.
+The `OFTCore.sol` contract uses a default `sharedDecimals` value of `6`. When overriding this value, be aware of a critical limitation, the `_toSD` function casts amounts to `uint64` when converting from local to shared decimals.
 
 ```solidity
     function _buildMsgAndOptions(
