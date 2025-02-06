@@ -4,7 +4,7 @@
 
 ### Block number
 
-Invoking `block.number` in a smart contract on Arbitrum will return the **L1** block number at which the sequencer received the transaction, not an **L2** block number. Also worth noting, the block number being returned is not necessarily the latest L1 block number. It is the latest synced block number and the syncing process occurs approximately every minute. In that period there can be ~5 new L1 blocks. So values returned by `block.number` on Arbitrum do not increase continuously but in "jumps" of ~5 blocks. If contract's logic requires tracking Arbitrum's L2 block numbers, that's possible as well using the precompile call `ArbSys(100).arbBlockNumber()`.
+Invoking `block.number` in a smart contract on Arbitrum will return the **L1** block number at which the sequencer received the transaction, not the **L2** block number. Also worth noting, the block number being returned is not necessarily the latest L1 block number. It is the latest synced block number and the syncing process occurs approximately every minute. In that period there can be ~5 new L1 blocks. So values returned by `block.number` on Arbitrum do not increase continuously but in "jumps" of ~5 blocks. If contract's logic requires tracking Arbitrum's L2 block numbers, that's possible as well using the precompile call `ArbSys(100).arbBlockNumber()`.
 
 > Always check for incorrect use of `block.number` on Arbitrum chains, especially if it is used to track time over short periods.
 
@@ -66,6 +66,16 @@ When creating a new retryable ticket one of the parameters that are provided to 
 
 Bug examples: [1](https://github.com/code-423n4/2024-05-olas-findings/issues/29)
 
+### Safe vs unsafe retryable ticket creation
+
+Arbitrum's `Inbox` contract offers 2 different entrypoints for creating retryables - [createRetryableTicket](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/Inbox.sol#L261) and [unsafeCreateRetryableTicket](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/Inbox.sol#L285). There are couple of important differences between the two.
+
+Unsafe version **will not** check that value provided is enough to cover the L2 execution cost of `gasLimit * gasPrice`. Creator of retryable ticket can even provide 0 value for gas limit and gas price and submission will succeed (value provided still must cover `maxSubmissionCost`), but auto-redemption will not be scheduled and ticket will need to be executed manually by providing L2 funds.
+
+There is also an important difference in how `excessFeeRefundAddress` (receives execution refund) and `callValueRefundAddress` (receives L2 call value if ticket is cancelled) are handled. Safe version will apply alias to both addresses in case they are a contract on L1 side, while unsafe version does not apply alias. So it is critical to ensure that the contract address used as the L2 refund address can control the refunded funds.
+
+> When the unsafe function for creating retryable tickets is used make sure the L2 contract is able to control the refunded funds
+
 ## Oracle integration
 
 ### Sequencer uptime
@@ -103,3 +113,55 @@ Even though min/max answers have been deprecated on newer feeds, some older feed
 > Check if the price feed used by the protocol has `minAnswer` and `maxAnswer` configured, and analyze the implications of the unlikely case that the actual price goes out of the range
 
 Bug examples: [1](https://github.com/pashov/audits/blob/master/team/md/Cryptex-security-review.md#m-02-circuit-breakers-are-not-considered-when-processing-chainlinks-answer), [2](https://code4rena.com/reports/2024-05-bakerfi#m-06-min-and-maxanswer-never-checked-for-oracle-price-feed)
+
+## Orbit chains
+
+Orbit chains are custom chains deployed using Arbitrum's Nitro software stack. They are mostly deployed as L2s on top of Ethereum or as L3s on top of Arbitrum.
+
+### Using custom fee token
+
+Transaction fees on Arbitrum are paid in ETH. Where does the ETH come from? Users lock their ETH in the bridge contract on the parent chain (Ethereum) and Arbitrum node mints the same amount of native currency on the child chain (Arbitrum) in user's account.
+
+But Orbit chains don't need to necessarily use ETH to pay for gas. Orbit chain owner can select, at deployment time, any ERC20 to be the fee token for new chain. Once set, fee token for the chain cannot be changed. In this case user will lock the ERC20 fee token on the parent chain and Arbitrum node will mint the same amount of native currency on the Orbit chain. Customized bridge contracts are used on the parent chain for this purpose - `ERC20Bridge`, `ERC20Inbox` and `ERC20Outbox` are used instead of `Bridge`, `Inbox` and `Outbox`.
+
+> Check if Orbit chain uses custom fee token by calling [nativeToken()](https://github.com/OffchainLabs/nitro-contracts/blob/780366a0c40caf694ed544a6a1d52c0de56573ba/src/bridge/ERC20Bridge.sol#L38) function on the chain's bridge contract. If chain is ETH based call will revert, otherwise it will return the address of the fee token on the parent chain
+
+### Custom fee token with non-18 decimals
+
+Let's say a team creates a new Orbit chain which uses USDC as the custom fee token. There is an inherent mismatch - USDC uses 6 decimals, while native currency is assumed to have 18 decimals. Orbit's bridge contracts deal with this in following way - when the native fee tokens are deposited from the parent chain to the Orbit chain, the deposited amount is scaled to 18 decimals. When native currency is withdrawn from the Orbit chain to the parent chain the amount is scaled from 18 back to the fee token's decimals. It's important to notice that scaling process can round-down amounts and cause user to lose some dust.
+
+As an example - Orbit chain is deployed as an L3 on top of Arbitrum and chain uses USDC as custom fee token. User bridges 10 USDC from Arbitrum to Orbit chain.
+
+```
+Deposited on Arbitrum: 10000000 (10 USDC)
+Minted on Orbit (scale to 18 decimals): 10000000000000000000 (10 "ETH" of native currency)
+```
+
+On Orbit chain user earns some yield, let's say `2*10^18 + 300`. User's total balance now is `12000000000000000300`. User decides to bridge it back to Arbitrum.
+
+```
+Withdrawn from Orbit: 12000000000000000300 (12.0000000000000003 "ETH" of native currency)
+Unlocked on Arbitrum: 12000000000000000300 / 10^12 = 12000000 (12 USDC)
+```
+
+User gets back 12 USDC, while the dust is lost in conversion process and it stays locked in the `ERC20Bridge` contract.
+
+> Look for any issues that can be caused by scaling or rounding logic when Orbit chain's fee token uses non-18 decimals
+
+### Retryable tickets in Orbit chains using non-18 decimals fee tokens
+
+When creating a retryable ticket to send L1 to L2 message to Orbit chain user needs to provide [4 numerical values](https://github.com/OffchainLabs/nitro-contracts/blob/v3.0.0/src/bridge/IERC20Inbox.sol#L21..L36):
+
+- l2CallValue (call value for execution on L2)
+- maxSubmissionCost (value to pay for storing the retryable ticket)
+- maxFeePerGas (gas price bid on L2)
+- tokenTotalFeeAmount (amount of fee tokens to be transferred from user to cover all the costs)
+
+Let's again assume Orbit chain's fee token is USDC. In that case it is not obvious whether the retryable ticket's parameters are denominated in USDC (6 decimals) or in the native currency (18 decimals). Answer is mixed - `tokenTotalFeeAmount` is denominated in USDC's decimals, while other 3 params are denominated in native currency's decimals. This is because `tokenTotalFeeAmount` signals how many tokens user needs to spend on **parent chain**, while other 3 params signal how execution is to be performed on **Orbit chain**.
+
+> When contract is integrating the Orbit retryable tickets, check that all the ticket input parameters are properly denominated
+
+## Useful resources
+
+- [Arbitrum official docs](https://docs.arbitrum.io/intro/)
+- [Out-of-order retryable tickets execution](https://blog.trailofbits.com/2024/03/01/when-try-try-try-again-leads-to-out-of-order-execution-bugs/)
