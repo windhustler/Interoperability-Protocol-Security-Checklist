@@ -88,7 +88,7 @@ The `OFTCore.sol` contract uses a default `sharedDecimals` value of `6`. When ov
 This becomes important when `localDecimals` and `sharedDecimals` are both set to 18. In this case:
 - The `decimalConversionRate` becomes 1 (no decimal adjustment)
 - Maximum transferable amount is limited to `uint64.max`
-- Any amount larger than `uint64.max` will silently be truncated to `uint64.max`
+- Any amount larger than `uint64.max` will silently be truncated to `uint64`
 
 This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be cast into `uint64`, resulting in a loss of value. 
 
