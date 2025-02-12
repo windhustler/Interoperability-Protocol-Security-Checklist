@@ -10,6 +10,94 @@ During the `lzReceive` function execution the [`_clearPayload`](https://github.c
 >In extreme cases, if there are a lot of messages verified, the looping can cause an "out of gas" (OOG) error. 
 However, there's a straightforward solution -- instead of processing a message with a high nonce, you can first process messages with lower nonces. This allows the `lazyInboundNonce` to be updated in smaller steps.
 
+## `lzCompose` implementation should always enforce `from` address and the `msg.sender`
+If we look at the default `OFT` standard implementation and the usage of `lzCompose` within `lzReceive`:
+```solidity
+## OFTCore.sol
+
+function _lzReceive(
+    Origin calldata _origin,
+    bytes32 _guid,
+    bytes calldata _message,
+    address /*_executor*/, // @dev unused in the default implementation.
+    bytes calldata /*_extraData*/ // @dev unused in the default implementation.
+) internal virtual override {
+    // @dev The src sending chain doesnt know the address length on this chain (potentially non-evm)
+    // Thus everything is bytes32() encoded in flight.
+    address toAddress = _message.sendTo().bytes32ToAddress();
+    // @dev Credit the amountLD to the recipient and return the ACTUAL amount the recipient received in local decimals
+>>>        uint256 amountReceivedLD = _credit(toAddress, _toLD(_message.amountSD()), _origin.srcEid);
+
+    if (_message.isComposed()) {
+        // @dev Proprietary composeMsg format for the OFT.
+        bytes memory composeMsg = OFTComposeMsgCodec.encode(
+            _origin.nonce,
+            _origin.srcEid,
+            amountReceivedLD,
+            _message.composeMsg()
+        );
+
+        // @dev Stores the lzCompose payload that will be executed in a separate tx.
+        // Standardizes functionality for executing arbitrary contract invocation on some non-evm chains.
+        // @dev The off-chain executor will listen and process the msg based on the src-chain-callers compose options passed.
+        // @dev The index is used when a OApp needs to compose multiple msgs on lzReceive.
+        // For default OFT implementation there is only 1 compose msg per lzReceive, thus its always 0.
+>>>            endpoint.sendCompose(toAddress, _guid, 0 /* the index of the composed message*/, composeMsg);
+    }
+
+    emit OFTReceived(_guid, _origin.srcEid, toAddress, amountReceivedLD);
+}
+```
+
+The key points here are:
+
+- Tokens are first credited to the `toAddress` contract which should implement the `lzCompose` function.
+- The `lzCompose` function gets executed in a separate transaction.
+- The tokens remain in the `toAddress` contract until `lzCompose` is executed
+
+Let's observe how the `sendCompose` and `lzCompose` inside the LayerZero contracts works:
+
+```solidity
+## MessagingComposer.sol
+
+function sendCompose(address _to, bytes32 _guid, uint16 _index, bytes calldata _message) external {
+    // must have not been sent before
+    if (composeQueue[msg.sender][_to][_guid][_index] != NO_MESSAGE_HASH) revert Errors.LZ_ComposeExists();
+>>>    composeQueue[msg.sender][_to][_guid][_index] = keccak256(_message);
+    emit ComposeSent(msg.sender, _to, _guid, _index, _message);
+}
+
+function lzCompose(
+    address _from,
+    address _to,
+    bytes32 _guid,
+    uint16 _index,
+    bytes calldata _message,
+    bytes calldata _extraData
+) external payable {
+    // assert the validity
+    bytes32 expectedHash = composeQueue[_from][_to][_guid][_index];
+    bytes32 actualHash = keccak256(_message);
+    if (expectedHash != actualHash) revert Errors.LZ_ComposeNotFound(expectedHash, actualHash);
+
+    // marks the message as received to prevent reentrancy
+    // cannot just delete the value, otherwise the message can be sent again and could result in some undefined behaviour
+    // even though the sender(composing Oapp) is implicitly fully trusted by the composer.
+    // eg. sender may not even realize it has such a bug
+>>>    composeQueue[_from][_to][_guid][_index] = RECEIVED_MESSAGE_HASH;
+    ILayerZeroComposer(_to).lzCompose{ value: msg.value }(_from, _guid, _message, msg.sender, _extraData);
+    emit ComposeDelivered(_from, _to, _guid, _index);
+}
+```
+
+When `sendCompose` is called from within `lzReceive`, the `msg.sender` (and therefore the `from` address stored in `composeQueue`) will be the OFT token contract. This is important because this same `from` address will be passed to `lzCompose` when executing the composed message.
+
+> When implementing `lzCompose`, you must validate:
+> 1. The `from` parameter matches your expected OFT token contract - this is the original sender that queued the composed message
+> 2. The `msg.sender` is the EndpointV2 contract - only the official endpoint should be able to trigger composed message execution
+>
+> Failing to validate either of these could allow unauthorized contracts to execute malicious composed messages.
+
 ## Message Execution Options
 LayerZeroV2 provides message execution options, where you can specify gas amount, `msg.value` and other options for the destination transaction. This info gets picked up by the application defined [Executor](https://docs.layerzero.network/v2/home/permissionless-execution/executors) contract. 
 
