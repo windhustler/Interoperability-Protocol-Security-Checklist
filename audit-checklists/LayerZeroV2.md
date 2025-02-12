@@ -1,5 +1,15 @@
 # LayerZeroV2 security checklist
 
+## EndpointV2
+
+### `lzReceive` function can revert with an "out of gas" (OOG) error 
+Every time a new message is [verified](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L159) inside the `EndpointV2` contract a mapping for the `receiver`, `srcEid` and `nonce` combination is set to the corresponding `payloadHash` for later execution with `lzReceive`. Every new message verified for the pathway has a sequential, monotonically increasing nonce.
+
+During the `lzReceive` function execution the [`_clearPayload`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b9e5967643853476445ffe0e777360b906/packages/layerzero-v2/evm/protocol/contracts/MessagingChannel.sol#L134-L142) function tries to lazily update the `lazyInboundNonce` to the nonce of the message being received. It loops through all the nonces to check if they have been verified and updates the `lazyInboundNonce` to the nonce of the message being received.
+
+>In extreme cases, if there are a lot of messages verified, the looping can cause an "out of gas" (OOG) error. 
+However, there's a straightforward solution -- instead of processing a message with a high nonce, you can first process messages with lower nonces. This allows the `lazyInboundNonce` to be updated in smaller steps.
+
 ## Message Execution Options
 LayerZeroV2 provides message execution options, where you can specify gas amount, `msg.value` and other options for the destination transaction. This info gets picked up by the application defined [Executor](https://docs.layerzero.network/v2/home/permissionless-execution/executors) contract. 
 
@@ -77,10 +87,9 @@ The `OFTCore.sol` contract uses a default `sharedDecimals` value of `6`. When ov
 
 This becomes important when `localDecimals` and `sharedDecimals` are both set to 18. In this case:
 - The `decimalConversionRate` becomes 1 (no decimal adjustment)
-- Maximum transferable amount is limited to `uint64.max`
-- Any amount larger than `uint64.max` will silently be truncated to `uint64.max`
+- Any amount larger than `uint64.max` will silently be truncated to `uint64`
 
-This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be capped at `uint64.max`, resulting in a loss of value. 
+This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be cast into `uint64`, resulting in a loss of value. 
 
 ## LayerZero Read
 [LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview) enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
