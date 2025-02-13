@@ -374,7 +374,7 @@ The configuration of send and receive libraries is managed through the `MessageL
 
 > Only the LayerZero time can register libraries that can be used to send or receive messages.
 
-### Key Privileges of LayerZero Team
+#### Key Privileges of LayerZero Team
 1. **Library Registration**: Only LayerZero can register new send/receive libraries via [`MessageLibManager.registerLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L140)
 2. **Default Library Control**: LayerZero can change default send/receive libraries via:
    - [`setDefaultSendLibrary()`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L157)
