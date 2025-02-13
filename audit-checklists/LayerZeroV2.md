@@ -177,7 +177,7 @@ This becomes important when `localDecimals` and `sharedDecimals` are both set to
 - The `decimalConversionRate` becomes 1 (no decimal adjustment)
 - Any amount larger than `uint64.max` will silently be truncated to `uint64`
 
-This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be cast into `uint64`, resulting in a loss of value. 
+> This truncation can lead to unexpected behavior where users might think they're transferring a larger amount, but the actual transfer will be cast into `uint64`, resulting in a loss of value. 
 
 ## LayerZero Read
 [LayerZero Read](https://docs.layerzero.network/v2/developers/evm/lzread/overview) enables requesting data from a remote chain without executing a transaction there. It works with a request-response pattern, where you request a certain data from the remote chain and the DVNs will respond by directly reading the data from the node on the remote chain. 
