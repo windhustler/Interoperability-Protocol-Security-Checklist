@@ -123,6 +123,17 @@ cast call 0x173272739Bd7Aa6e4e214714048a9fE699453059 "dstConfig(uint32)(uint64,u
 
 The maximum amount of native tokens to airdrop from Ethereum -> Polygon is 1500e18 MATIC.
 
+## Gas limit and `msg.value`
+All the metadata passed as options to the `lzSend` function is simply an off-chain agreement with the Executor. The `lzReceive` function can be executed by anyone with different `msg.value` and gas limit compared to what one specified on the sending side. 
+
+There are however various ways to enforce certain properties on the receiving side:
+- Whitelisting addresses that can execute [`lzReceive`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L181).
+- Encoding the `msg.value` into the message payload and reverting if the value is different from what was specified on the sending side.
+- Enforcing certain gas limit in the `lzReceive` function, e.g. [`SafeCallMinGas.sol`](https://github.com/liquity/V2-gov/blob/22bc82f/src/utils/SafeCallMinGas.sol) contract. 
+
+Bug examples: [1](https://solodit.cyfrin.io/issues/bridgedgovernorlzreceive-can-be-executed-with-different-msgvalue-than-intended-cantina-none-drips-pdf)
+
+
 ## OFT standard
 
 ### Dust removal
