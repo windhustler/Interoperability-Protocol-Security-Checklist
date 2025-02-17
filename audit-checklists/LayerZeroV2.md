@@ -123,7 +123,7 @@ cast call 0x173272739Bd7Aa6e4e214714048a9fE699453059 "dstConfig(uint32)(uint64,u
 
 The maximum amount of native tokens to airdrop from Ethereum -> Polygon is 1500e18 MATIC.
 
-## Gas limit and `msg.value`
+### Gas limit and `msg.value`
 All the metadata passed as options to the `lzSend` function is simply an off-chain agreement with the Executor. The `lzReceive` function can be executed by anyone with different `msg.value` and gas limit compared to what one specified on the sending side. 
 
 There are however various ways to enforce certain properties on the receiving side:
@@ -133,6 +133,17 @@ There are however various ways to enforce certain properties on the receiving si
 
 Bug examples: [1](https://solodit.cyfrin.io/issues/bridgedgovernorlzreceive-can-be-executed-with-different-msgvalue-than-intended-cantina-none-drips-pdf)
 
+### Execution ordering
+The default OApp implementation of `lzReceive` is un-ordered execution. This means if nonce 4,5,6 are verified, the Executor will try to execute the message with nonce 4 first, but if it fails (due to some gas or user logic related issue), it will try to execute the message with nonce 5 and so on.
+
+The proccess the off-chain executor uses if you want to enforce ordered execution:
+1. It checks if the [ordered execution option](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol#L107-L111) has been set.
+2. If this is true then it queries the [nextNonce](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppReceiver.sol#L78) function in the receiver contract.
+3. Let's assume nextNonce returns nonce 4. It tries to execute nonce 4 and if this transaction fails for any reason, it will block all subsequent transactions with higher nonces from being executed until nonce 4 is resolved.
+
+> If you want to enforce ordered execution, you need to ensure that the `nextNonce` function is implemented correctly and that it returns the correct nonce. Make sure to never have a reverting transaction due to the blocking nature of the system. 
+
+Bug examples: [1](https://solodit.cyfrin.io/issues/non-executable-messages-in-bridgedgovernor-can-result-in-an-unrecoverable-state-cantina-none-drips-pdf)
 
 ## OFT standard
 
