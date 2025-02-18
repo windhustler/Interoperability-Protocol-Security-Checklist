@@ -430,15 +430,12 @@ There are two security considerations here. The attack threat is LayerZero actin
 ## Configuration Tips
 
 ### Pausing bidirectional messages
-<details>
-<summary>### Pausing bidirectional messages</summary>
 
 When deploying an OApp on multiple chains (e.g., Ethereum and Arbitrum), bidirectional communication is established by [setting peers](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppCore.sol#L56) on both OApps. However, you might want to allow messages in only one direction (e.g., only Ethereum -> Arbitrum).
 
 This cannot be achieved through the `setPeer` configuration alone since `_getPeerOrRevert` is called during both [sending](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppSender.sol#L88) and [receiving](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppReceiver.sol#L106) messages.
 
 However, there is a workaround to disable communication in one direction without modifying the peer configuration. By setting the [Executor configuration](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L307) parameter [`maxMessageSize`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L24) to 1 byte, the [`send`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L162) function will always revert, effectively blocking messages from being sent from that chain.
-</details>
 
 ## Useful resources
 
