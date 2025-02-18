@@ -437,6 +437,23 @@ This cannot be achieved through the `setPeer` configuration alone since `_getPee
 
 However, there is a workaround to disable communication in one direction without modifying the peer configuration. By setting the [Executor configuration](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L307) parameter [`maxMessageSize`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L24) to 1 byte, the [`send`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L162) function will always revert, effectively blocking messages from being sent from that chain.
 
+## Non-standard implementations
+
+### Message receiver should implement `allowInitializePath` function
+
+When a DVN verifies a message for a pathway the first time, it calls [`allowInitializePath`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/EndpointV2.sol#L340) on the receiver to check if messages from that sender and source chain are allowed. The default OApp implementation checks if the sender is a trusted peer:
+
+```solidity
+## OAppReceiver.sol
+
+function allowInitializePath(Origin calldata origin) public view virtual returns (bool) {
+    return peers[origin.srcEid] == origin.sender;
+}
+```
+
+> If you're not using the default OApp implementation, make sure to implement the `allowInitializePath` function in your receiving contract.
+
+
 ## Useful resources
 
 - [LayerZeroV2 developer docs](https://docs.layerzero.network/v2)
