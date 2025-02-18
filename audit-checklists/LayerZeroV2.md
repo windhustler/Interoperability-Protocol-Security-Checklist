@@ -133,10 +133,10 @@ There are however various ways to enforce certain properties on the receiving si
 
 Bug examples: [1](https://solodit.cyfrin.io/issues/bridgedgovernorlzreceive-can-be-executed-with-different-msgvalue-than-intended-cantina-none-drips-pdf)
 
-### Execution ordering
+### Execution Ordering
 The default OApp implementation of `lzReceive` is un-ordered execution. This means if nonce 4,5,6 are verified, the Executor will try to execute the message with nonce 4 first, but if it fails (due to some gas or user logic related issue), it will try to execute the message with nonce 5 and so on.
 
-The proccess the off-chain executor uses if you want to enforce ordered execution:
+The process the off-chain executor uses if you want to enforce ordered execution:
 1. It checks if the [ordered execution option](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol#L107-L111) has been set.
 2. If this is true then it queries the [nextNonce](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppReceiver.sol#L78) function in the receiver contract.
 3. Let's assume nextNonce returns nonce 4. It tries to execute nonce 4 and if this transaction fails for any reason, it will block all subsequent transactions with higher nonces from being executed until nonce 4 is resolved.
@@ -416,7 +416,7 @@ Currently, the default libraries are the only available options and are required
 
 There are two security considerations here. The attack threat is LayerZero acting maliciously.
 
-1. **Protocol hasn’t configured a send/receive library**
+1. **Protocol hasn't configured a send/receive library**
     - Relies on system defaults
     - LayerZero can freely change these defaults
     - Risk of protocol functionality being bricked
@@ -430,11 +430,15 @@ There are two security considerations here. The attack threat is LayerZero actin
 ## Configuration Tips
 
 ### Pausing bidirectional messages
+<details>
+<summary>### Pausing bidirectional messages</summary>
+
 When deploying an OApp on multiple chains (e.g., Ethereum and Arbitrum), bidirectional communication is established by [setting peers](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppCore.sol#L56) on both OApps. However, you might want to allow messages in only one direction (e.g., only Ethereum -> Arbitrum).
 
 This cannot be achieved through the `setPeer` configuration alone since `_getPeerOrRevert` is called during both [sending](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppSender.sol#L88) and [receiving](https://github.com/LayerZero-Labs/LayerZero-v2/blob/943ce4a/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppReceiver.sol#L106) messages.
 
->However, there is a workaround to disable communication in one direction without modifying the peer configuration. By setting the [Executor configuration](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L307) parameter [`maxMessageSize`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L24) to 1 byte, the [`send`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L162) function will always revert, effectively blocking messages from being sent from that chain.
+However, there is a workaround to disable communication in one direction without modifying the peer configuration. By setting the [Executor configuration](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/protocol/contracts/MessageLibManager.sol#L307) parameter [`maxMessageSize`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L24) to 1 byte, the [`send`](https://github.com/LayerZero-Labs/LayerZero-v2/blob/592625b/packages/layerzero-v2/evm/messagelib/contracts/SendLibBase.sol#L162) function will always revert, effectively blocking messages from being sent from that chain.
+</details>
 
 ## Useful resources
 
