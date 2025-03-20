@@ -10,7 +10,7 @@ Wormhole is a cross-chain messaging protocol that provides several services:
 - Cross-chain governance
 
 The protocol operates as a multisig bridge system with the following key components:
-- Guardian nodes: A minimum of 13 guardian nodes must attest to messages (VAAs) for them to be valid
+- Guardian nodes: A minimum of 13 guardian nodes must attest to messages (VAA's) for them to be valid
 - Relayers: Trustless parties responsible for delivering VAAs to destination chains
 - Wormhole-Core contract: Verifies VAAs on destination chains
 
