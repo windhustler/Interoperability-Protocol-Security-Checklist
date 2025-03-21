@@ -435,5 +435,238 @@ Reference bugs:
 - [OS-SNM-ADV-04](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de): Double Normalization in interest calculations
 - [OS-SNM-ADV-05](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de): Double Denormalization in notional calculations
 
+### Guardian Set Transition Issues
+
+When implementing Wormhole guardian set updates, proper handling of the transition period is crucial. The protocol needs to maintain both old and new guardian sets active during the transition period to ensure continuous operation. This issue can affect any chain implementing Wormhole guardian sets.
+
+**Example Implementation (from TON blockchain):**
+```func
+;; Example of incorrect strict equality check during guardian set transition
+;; This issue can occur in any chain's implementation of Wormhole guardian sets
+throw_unless(
+    ERROR_INVALID_GUARDIAN_SET(
+        current_guardian_set_index == vm_guardian_set_index(
+            (expiration_time == 0) | (expiration_time > now())
+        )
+    )
+);
+```
+
+**Impact:**
+- Old guardian set cannot update messages during transition period
+- Messages from old guardians are rejected
+- Critical updates may be lost
+- Protocol may experience data staleness during guardian set updates
+- Potential disruption in cross-chain services
+- Affects all chains implementing Wormhole guardian sets
+
+**Exploit Scenario:**
+1. New guardian set is announced
+2. During the 24-hour propagation period:
+   - New message arrives signed by old guardian set
+   - Contract rejects the update due to strict equality check
+   - Message information is lost
+   - Protocol continues with stale data
+   - Can affect any service using Wormhole guardian sets (e.g., price feeds, token bridges, governance)
+
+**Correct Implementation:**
+```solidity
+// Allow both old and new guardian sets during transition
+// This pattern should be implemented on all chains
+require(
+    currentGuardianSetIndex >= vmGuardianSetIndex,
+    "Invalid guardian set"
+);
+```
+
+**Key Considerations:**
+1. Guardian set updates take up to 24 hours to propagate across all chains
+2. Both old and new guardian sets must remain active during transition
+3. Messages from either set should be accepted
+4. Implement proper expiration time checks
+5. Consider implementing a grace period for guardian set transitions
+6. Pay attention to chain-specific message passing models
+
+**Remediation Options:**
+1. Change equality operator (==) to greater than or equal (>=)
+2. Implement a transition period flag
+3. Track active guardian sets during transition
+4. Add validation for guardian set expiration times
+5. Consider implementing a backup mechanism for critical updates
+6. Ensure proper handling of chain-specific message passing during transitions
+
+Reference bugs:
+- [TOB-PYTHTON-1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf): Guardian set transition period issues in Pyth TON Oracle integration
+
+### Empty Guardian Set Validation
+
+When implementing Wormhole guardian set updates, proper validation of the guardian set size is crucial. The protocol must ensure that guardian sets cannot be set to empty, as this would break all guardian verification functionality.
+
+**Example Implementation (from TON blockchain):**
+```func
+;; Example of missing guardian length validation in TON
+;; This issue can occur in any chain's implementation of Wormhole guardian sets
+(int, int, int, cell, int) parse_encoded_upgrade(slice payload) impure {
+    int module = payload~load_uint(256);
+    throw_unless(ERROR_INVALID_MODULE, module == UPGRADE_MODULE);
+    int action = payload~load_uint(8);
+    throw_unless(ERROR_INVALID_GOVERNANCE_ACTION, action == 2);
+    int chain = payload~load_uint(16);
+    int new_guardian_set_index = payload~load_uint(32);
+    throw_unless(ERROR_NEW_GUARDIAN_SET_INDEX_IS_INVALID, new_guardian_set_index == (current_guardian_set_index + 1));
+    
+    int guardian_length = payload~load_uint(8);  // Missing validation for non-zero length
+    cell new_guardian_set_keys = new_dict();
+    int key_count = 0;
+    // ... rest of the function
+}
+```
+
+**Impact:**
+- Guardian set can be set to empty through upgrade messages
+- All guardian verification functionality breaks
+- No messages can be verified after empty guardian set
+- Protocol becomes completely unusable
+- Requires emergency fix or contract upgrade to recover
+- Affects all chains implementing Wormhole guardian sets
+
+**Exploit Scenario:**
+1. Malicious or incorrect guardian set upgrade message arrives
+2. Message contains zero guardian_length and no keys
+3. Contract processes upgrade without validation
+4. Guardian set becomes empty
+5. All subsequent guardian verifications fail
+6. Protocol functionality breaks completely
+
+**Correct Implementation:**
+```solidity
+// Validate guardian set size before processing upgrade
+require(guardianLength > 0, "Guardian set cannot be empty");
+require(keyCount > 0, "Guardian set must contain at least one key");
+```
+
+**Key Considerations:**
+1. Always validate guardian set size before processing upgrades
+2. Ensure guardian set contains at least one key
+3. Implement proper error handling for invalid guardian sets
+4. Consider implementing minimum guardian set size requirements
+5. Add validation at multiple levels (parsing and processing)
+6. Include comprehensive test cases for edge cases
+
+**Remediation Options:**
+1. Add explicit validation for non-zero guardian length
+2. Validate key count after processing guardian set
+3. Implement minimum guardian set size requirements
+4. Add emergency pause functionality for guardian set updates
+5. Consider implementing guardian set size limits
+6. Add comprehensive test coverage for guardian set edge cases
+
+Reference bugs:
+- [TOB-PYTHTON-2](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf): Empty guardian set validation in Pyth TON Oracle integration
+
+### Signature Verification Issues in Guardian Sets
+
+When implementing Wormhole guardian set signature verification, proper validation of unique signatures is crucial. The protocol must ensure that the same guardian signature cannot be used multiple times to achieve quorum.
+
+**Example Implementation (from TON blockchain):**
+```func
+;; Example of missing unique signature validation in TON
+;; This issue can occur in any chain's implementation of Wormhole guardian sets
+() verify_signatures(int hash, cell signatures, int signers_length, cell guardian_set_keys, int guardian_set_size) impure {
+    slice cs = signatures.begin_parse();
+    int i = 0;
+    int valid_signatures = 0;
+    
+    while (i < signers_length) {
+        // ... signature parsing code ...
+        
+        int guardian_index = sig_slice~load_uint(8);
+        int r = sig_slice~load_uint(256);
+        int s = sig_slice~load_uint(256);
+        int v = sig_slice~load_uint(8);
+        
+        // Missing validation for unique guardian indices
+        (slice guardian_key, int found?) = guardian_set_keys.udict_get?(8, guardian_index);
+        int guardian_address = guardian_key~load_uint(160);
+        
+        throw_unless(ERROR_INVALID_GUARDIAN_ADDRESS, parsed_address == guardian_address);
+        valid_signatures += 1;
+        i += 1;
+    }
+    
+    ;; Check quorum (2/3 + 1)
+    throw_unless(ERROR_NO_QUORUM, valid_signatures >= (((guardian_set_size * 10) / 3) * 2) / 10 + 1);
+}
+```
+
+**Impact:**
+- Single guardian can forge messages by repeating their signature
+- Quorum can be achieved with duplicate signatures
+- Protocol security is completely compromised
+- Malicious guardian can create arbitrary messages
+- Affects all chains implementing Wormhole guardian sets
+- Breaks the fundamental security assumption of multi-signature verification
+
+**Exploit Scenario:**
+1. Current guardian set has 13 guardians
+2. Rogue guardian discovers signature verification vulnerability
+3. Guardian repeats their signature 13 times in a message
+4. Message passes quorum check despite using same signature
+5. Guardian can now create arbitrary messages without consensus
+6. Protocol security is completely compromised
+
+**Correct Implementation:**
+```solidity
+// Track used guardian indices to prevent duplicates
+mapping(uint8 => bool) usedIndices;
+
+function verifySignatures(
+    bytes32 hash,
+    bytes[] calldata signatures,
+    address[] calldata guardianSet
+) public {
+    uint256 validSignatures = 0;
+    
+    for (uint256 i = 0; i < signatures.length; i++) {
+        uint8 guardianIndex = uint8(signatures[i][0]);
+        
+        // Check for duplicate indices
+        require(!usedIndices[guardianIndex], "Duplicate guardian signature");
+        usedIndices[guardianIndex] = true;
+        
+        // Verify signature
+        address signer = recoverSigner(hash, signatures[i]);
+        require(signer == guardianSet[guardianIndex], "Invalid guardian signature");
+        
+        validSignatures++;
+    }
+    
+    // Check quorum
+    require(
+        validSignatures >= ((guardianSet.length * 2) / 3) + 1,
+        "Quorum not reached"
+    );
+}
+```
+
+**Key Considerations:**
+1. Always validate unique guardian indices
+2. Track used signatures during verification
+3. Implement proper signature recovery
+4. Consider implementing signature replay protection
+5. Add validation for guardian set size
+6. Include comprehensive test cases for edge cases
+
+**Remediation Options:**
+1. Add tracking of used guardian indices
+2. Implement signature uniqueness checks
+3. Add validation for minimum unique signatures
+4. Consider implementing signature expiration
+5. Add emergency pause functionality for signature verification
+6. Implement comprehensive test coverage for signature verification
+
+Reference bugs:
+- [TOB-PYTHTON-3](https://github.com/trailofbits/publications/blob/master/reviews/PythTON.pdf): Single guardian signature quorum bypass in Pyth TON Oracle integration
+
 
 
