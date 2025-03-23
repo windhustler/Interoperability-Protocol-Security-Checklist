@@ -407,7 +407,7 @@ While only LayerZero can register new libraries, each protocol can select and co
 
 What are the options? Let's check the [EndpointV2 on Ethereum](https://etherscan.io/address/0x1a44076050125825900e736c501f859c50fE728c) contract and call the `getRegisteredLibraries` variable. Here is what we get:
 
-- [BlockLibrary](https://etherscan.io/address/0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862)- dummy library that completely disables sending and receiving messages. 
+- [BlockLibrary](https://etherscan.io/address/0x1ccBf0db9C192d969de57E25B3fF09A25bb1D862) - dummy library that completely disables sending and receiving messages. 
 - [SendUln302](https://etherscan.io/address/0xbb2ea70c9e858123480642cf96acbcce1372dce1)
 - [ReceiveUln302](https://etherscan.io/address/0xc02ab410f0734efa3f14628780e6e695156024c2)
 - [ReadLibrary1002](https://etherscan.io/address/0x74f55bc2a79a27a0bf1d1a35db5d0fc36b9fdb9d)
