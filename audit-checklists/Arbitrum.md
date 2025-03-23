@@ -1,4 +1,4 @@
-# Arbitrum security checklist
+# Arbitrum Security Checklist
 
 ## General
 
