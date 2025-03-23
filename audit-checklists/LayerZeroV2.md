@@ -1,4 +1,4 @@
-# LayerZeroV2 security checklist
+# LayerZeroV2 Security Checklist
 
 ## EndpointV2
 
