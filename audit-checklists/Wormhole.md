@@ -76,7 +76,7 @@ ICircleIntegration(wormholeCircleBridge).transferTokensWithPayload{value: messag
 );
 ```
 
-Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#M-1), [2](https://iosiro.com/audits/infinex-accounts-smart-account-smart-contract-audit#IO-IFX-ACC-007), [3](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs5), [4](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2FPxfV4xPmOCVKng8LcjiH%2FMayan_MCTP_Sec3.pdf?alt=media&token=62699afe-9e67-44fb-96fe-b593041365f4), [5](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de)
+Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#M-1), [2](https://iosiro.com/audits/infinex-accounts-smart-account-smart-contract-audit#IO-IFX-ACC-007), [3](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs5), [4](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2FPxfV4xPmOCVKng8LcjiH%2FMayan_MCTP_Sec3.pdf?alt=media&token=62699afe-9e67-44fb-96fe-b593041365f4), [5](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de), [6](https://cdn.prod.website-files.com/621a140a057f392845dfaef3/65c9d04d3bc92bd2dfb6dc87_SmartContract_Audit_MagpieProtocol(v4)_v1.1.pdf), [7](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs5)
 
 ### Relayer Authorization
 
@@ -164,7 +164,7 @@ function _computeScaledAmount(uint256 _amount, address _tokenAddress) internal r
 }
 ```
 
-Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#L-2), [2](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs4), [3](https://cdn.prod.website-files.com/621a140a057f392845dfaef3/65c9d04d3bc92bd2dfb6dc87_SmartContract_Audit_MagpieProtocol(v4)_v1.1.pdf)
+Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#L-2)
 
 ### Normalize and Denormalize makes dust amount stuck in contracts
 
@@ -216,6 +216,8 @@ Bug examples: [1](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-pro
 
 When implementing Wormhole guardian set updates, proper handling of the transition period is crucial. The protocol needs to maintain both old and new guardian sets active during the transition period to ensure continuous operation. This issue can affect any chain implementing Wormhole guardian sets.
 
+The following is an example from TON blockchain smart contracts of incorrect handling of guardian node transitions.
+
 ```func
 ;; Example of incorrect strict equality check during guardian set transition
 ;; This issue can occur in any chain's implementation of Wormhole guardian sets
@@ -226,10 +228,15 @@ throw_unless(
         )
     )
 );
-```
 
-// Correct Implementation
-require(currentGuardianSetIndex >= vmGuardianSetIndex, "Invalid guardian set");
+;; Correct Implementation (change the operator == to >=)
+throw_unless(
+    ERROR_INVALID_GUARDIAN_SET(
+        current_guardian_set_index >= vm_guardian_set_index(
+            (expiration_time == 0) | (expiration_time > now())
+        )
+    )
+);
 ```
 
 Bug examples: [1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
@@ -299,16 +306,20 @@ Check for missing validation of unique guardian signatures during verification.
     ;; Check quorum (2/3 + 1)
     throw_unless(ERROR_NO_QUORUM, valid_signatures >= (((guardian_set_size * 10) / 3) * 2) / 10 + 1);
 }
+```
+The above TON smart contract implements verification of guardian node signatures with a quorum of super majority (`>2/3`). But the issue is that it is not tracking the verified guardian nodes. Meaning that it allows replay of one guardian node signature for `>2/3` times will pass the quorum. 
 
-// Correct Implementation
+```func
+;; A temporary example of correct implementation, but you should check all the edge cases of guardian node signing process. 
 function verifySignatures(bytes[] calldata signatures) public {
     mapping(uint8 => bool) usedIndices;
     for (uint256 i = 0; i < signatures.length; i++) {
         uint8 guardianIndex = uint8(signatures[i][0]);
         require(!usedIndices[guardianIndex], "Duplicate guardian signature");
+        ;; tracking of verified guardian node signatures.
         usedIndices[guardianIndex] = true;
         
-        // Verify signature
+        ;; Verify signature
         address signer = recoverSigner(hash, signatures[i]);
         require(signer == guardianSet[guardianIndex], "Invalid guardian signature");
         
@@ -317,7 +328,7 @@ function verifySignatures(bytes[] calldata signatures) public {
 }
 ```
 
-Bug examples: [1](https://github.com/trailofbits/publications/blob/master/reviews/PythTON.pdf)
+Bug examples: [1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
 
 
 
