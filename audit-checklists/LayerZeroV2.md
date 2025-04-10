@@ -459,5 +459,4 @@ function allowInitializePath(Origin calldata origin) public view virtual returns
 - [LayerZeroV2 developer docs](https://docs.layerzero.network/v2)
 - [Decode LayerZero V2](https://senn.fun/decode-layerzero-v2)
 - [LayerZero V2 Deep Dive Video](https://www.youtube.com/watch?v=ercyc98S7No)
-
-
+- [Comparison between Hyperlane, Wormhole and LayerZero](https://lindgren.xyz/posts/how-interopability-work/)
