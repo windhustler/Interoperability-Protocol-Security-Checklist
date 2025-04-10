@@ -53,8 +53,6 @@ Key parameters and considerations:
    - Lower levels = faster processing but vulnerable to block reorgs
    - Must be set appropriately based on chain finality guarantees
 
-Bug examples: [1](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2FPxfV4xPmOCVKng8LcjiH%2FMayan_MCTP_Sec3.pdf?alt=media&token=62699afe-9e67-44fb-96fe-b593041365f4)
-
 ### Message Fee Handling
 
 The `publishMessage()` function is payable and requires the correct fee to be passed. Always fetch the current fee using `messageFee()` on the Wormhole-Core contract instead of hardcoding the value.
@@ -76,7 +74,7 @@ ICircleIntegration(wormholeCircleBridge).transferTokensWithPayload{value: messag
 );
 ```
 
-Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#M-1), [2](https://iosiro.com/audits/infinex-accounts-smart-account-smart-contract-audit#IO-IFX-ACC-007), [3](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs5), [4](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2FPxfV4xPmOCVKng8LcjiH%2FMayan_MCTP_Sec3.pdf?alt=media&token=62699afe-9e67-44fb-96fe-b593041365f4), [5](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de), [6](https://cdn.prod.website-files.com/621a140a057f392845dfaef3/65c9d04d3bc92bd2dfb6dc87_SmartContract_Audit_MagpieProtocol(v4)_v1.1.pdf), [7](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs5)
+Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#M-1), [2](https://cdn.prod.website-files.com/621a140a057f392845dfaef3/65c9d04d3bc92bd2dfb6dc87_SmartContract_Audit_MagpieProtocol(v4)_v1.1.pdf), [3](https://iosiro.com/audits/infinex-accounts-smart-account-smart-contract-audit#IO-IFX-ACC-007),  [QS-5](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs5), [P1-I-02](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2FPxfV4xPmOCVKng8LcjiH%2FMayan_MCTP_Sec3.pdf?alt=media&token=62699afe-9e67-44fb-96fe-b593041365f4), [OS-SNM-SUG-02](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de)
 
 ### Relayer Authorization
 
@@ -126,7 +124,7 @@ function _bridgeUSDCWithWormhole(
 }
 ```
 
-Bug examples: [1](https://0xmacro.com/library/audits/infinex-1.html#L-1), [2](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs3), [3](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2Fz6Gq4wJprv7LomYsQ1LY%2FMayan_Swift_Sec3.pdf?alt=media&token=4a1b7f69-a626-4e34-9db2-4e931c3bc11f)
+Bug examples: [L1](https://0xmacro.com/library/audits/infinex-1.html#L-1), [QS-3](https://certificate.quantstamp.com/full/hashflow-hashverse/1af3e150-d612-4b24-bc74-185624a863f8/index.html#findings-qs3), [P1-I-05](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2Fz6Gq4wJprv7LomYsQ1LY%2FMayan_Swift_Sec3.pdf?alt=media&token=4a1b7f69-a626-4e34-9db2-4e931c3bc11f)
 
 ### Decimal Scaling Issues in Token Bridging
 
@@ -189,7 +187,7 @@ function swap(uint256 amountIn) external {
 }
 ```
 
-Bug examples: [1](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2F9YSweDuRP1P28bMmjy63%2FMayan_Audit_OtterSec.pdf?alt=media&token=ffefae4d-367d-401f-bd16-2d799dd3a403), [2](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2F19FGz84wBMigB9EBngTu%2Foptimistic_finality_audit_final.pdf?alt=media&token=c3a631b5-0cc0-4104-a781-0691e2491973)
+Bug examples: [OS-MYN-ADV-05](https://2301516674-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNGiifMbrcug9ogAfisQY%2Fuploads%2F9YSweDuRP1P28bMmjy63%2FMayan_Audit_OtterSec.pdf?alt=media&token=ffefae4d-367d-401f-bd16-2d799dd3a403), [OS-OPF-ADV-00](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2F19FGz84wBMigB9EBngTu%2Foptimistic_finality_audit_final.pdf?alt=media&token=c3a631b5-0cc0-4104-a781-0691e2491973)
 
 ### Double Normalization/Denormalization Issues
 
@@ -210,7 +208,7 @@ function getCurrentAccrualIndices(address assetAddress) public view returns(Accr
 }
 ```
 
-Bug examples: [1](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de), [2](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de)
+Bug examples: [OS-SNM-ADV-04](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de), [OS-SNM-ADV-05](https://2239978398-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FzjiJ8UzMPEfugKsLon59%2Fuploads%2FYr6wLCHl8r6uS6eHAYnb%2Fsynonym_audit_final.pdf?alt=media&token=3ad993f9-da68-496d-be06-d7eed5d305de)
 
 ### Guardian Set Transition Issues
 
@@ -239,7 +237,7 @@ throw_unless(
 );
 ```
 
-Bug examples: [1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
+Bug examples: [TOB-PYTHTON-1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
 
 ### Empty Guardian Set Validation
 
@@ -257,22 +255,47 @@ Check for missing validation of guardian set size during upgrades.
     int new_guardian_set_index = payload~load_uint(32);
     throw_unless(ERROR_NEW_GUARDIAN_SET_INDEX_IS_INVALID, new_guardian_set_index == (current_guardian_set_index + 1));
     
-    int guardian_length = payload~load_uint(8);  // Missing validation for non-zero length
+    ;; Missing validation for non-zero length
+    int guardian_length = payload~load_uint(8); 
     cell new_guardian_set_keys = new_dict();
     int key_count = 0;
-    // ... rest of the function
+    while (key_count < guardian_length) {
+        builder key = begin_cell();
+        int key_bits_loaded = 0;
+        while (key_bits_loaded < 160) {
+            int bits_to_load = min(payload.slice_bits(), 160 - key_bits_loaded);
+            key = key.store_slice(payload~load_bits(bits_to_load));
+            key_bits_loaded += bits_to_load;
+            if (key_bits_loaded < 160) {
+                throw_unless(ERROR_INVALID_GUARDIAN_SET_UPGRADE_LENGTH, ~ payload.slice_refs_empty?());
+                payload = payload~load_ref().begin_parse();
+            }
+        }
+        slice key_slice = key.end_cell().begin_parse();
+        new_guardian_set_keys~udict_set(8, key_count, key_slice);
+        key_count += 1;
+    }
+    throw_unless(ERROR_GUARDIAN_SET_KEYS_LENGTH_NOT_EQUAL, key_count == guardian_length);
+    throw_unless(ERROR_INVALID_GUARDIAN_SET_UPGRADE_LENGTH, payload.slice_empty?());
+
+    return (action, chain, module, new_guardian_set_keys, new_guardian_set_index);
 }
 ```
 
+Missing empty guardian set validation causes `parse_and_verify_wormhole_vm` to fail in the subsequent calls, requiring at least one guardian key. 
 
-```solidity
-// Correct Implementation:
-// Validate guardian set size before processing upgrade
-require(guardianLength > 0, "Guardian set cannot be empty");
-require(keyCount > 0, "Guardian set must contain at least one key");
+```diff
+;; Correct Implementation:
+;; Validate guardian set size before processing upgrade
+;; Guardian set cannot be empty or Guardian set must contain at least one key after upgrade
+    int guardian_length = payload~load_uint(8); 
++   throw_unless(ERROR_EMPTY_GUARDIAN_SET, guardian_length != 0);
+    cell new_guardian_set_keys = new_dict();
+    int key_count = 0;
+    while (key_count < guardian_length) {
 ```
 
-Bug examples: [1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
+Bug examples: [TOB-PYTHON-2](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
 
 ### Signature Verification Issues in Guardian Sets
 
@@ -328,7 +351,7 @@ function verifySignatures(bytes[] calldata signatures) public {
 }
 ```
 
-Bug examples: [1](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
+Bug examples: [TOB-PYTHON-3](https://github.com/pyth-network/audit-reports/blob/main/2024_11_26/pyth_ton_pull_oracle_audit_final.pdf)
 
 
 
