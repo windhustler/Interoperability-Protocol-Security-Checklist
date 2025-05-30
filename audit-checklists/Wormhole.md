@@ -51,7 +51,7 @@ Key parameters and considerations:
    - Determines the security level and processing delay
    - Higher levels = better security but longer delays
    - Lower levels = faster processing but vulnerable to block reorgs
-   - Must be set appropriately based on chain finality guarantees
+   - Must be set appropriately based on chain finality guarantees, generally Wormhole [recommends](https://github.com/hats-finance/Catalyst-Exchange-0x3026c1ea29bf1280f99b41934b2cb65d053c9db4/issues/11#issuecomment-1909330702) it to set in between 1-15
 
 ### Message Fee Handling
 
