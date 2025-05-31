@@ -48,3 +48,18 @@ Ref: [Across Docs](https://docs.across.to/reference/selected-contract-functions#
 ### Across doesn't send the origin sender address, which makes spoofable attacks easier
 The Across protocol doesn't provide origin sender information in bridged messages, making the msgs spoofable if not handled correctly. This absence requires developers to implement additional verification measures to prevent attackers from exploiting this gap
 Bug Example: [Finding 5.2.2](https://github.com/meliopolis/chainhopper-protocol/blob/main/docs/Spearbit-audit.pdf)
+
+### `handleV3AcrossMessage` should be callable by only the Spoke Contract
+Restricting `handleV3AcrossMessage` to be callable only by the authorized SpokePool contract (or another designated trusted contract) ensures that arbitrary or malicious actors cannot invoke this function with crafted or spoofed data. Without such access control, any external party could call the function with unauthorized messages, potentially causing unintended state changes, fund manipulation, or denial of service. This would undermine the protocol’s security guarantees and expose user funds to risk.
+```solidity
+    function handleV3AcrossMessage(
+        address tokenSent,
+        uint256 amount,
+        address relayer,
+        bytes memory message
+    ) external override {
+        // 1. Validate Sender [MUST]
+        if (msg.sender != acrossSpokePool) {
+            revert INVALID_SENDER();
+        }
+```
