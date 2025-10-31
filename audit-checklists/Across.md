@@ -1,3 +1,6 @@
+# Across Intent Lifecycle
+![Across Intent Lifecycle](/resources/Across-Intents-Journey.png)
+
 # Across Security Checklist
 Across Protocol is an intent-based cross-chain protocol. It enables fast, low-cost, and secure asset transfers across multiple blockchain networks by leveraging a decentralized network of relayers and an optimistic verification model.
 
